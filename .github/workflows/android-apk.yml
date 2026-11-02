@@ -1,149 +1,29 @@
+name: Build Android APK
+'on':
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-          @Composable
-          private fun IliyaNetworkApp(manager: ConnectivityManager) {
-              var network by remember { mutableStateOf(readNetworkState(manager)) }
-              var samples by remember { mutableStateOf&lt;List&lt;Long?&gt;&gt;(emptyList()) }
-              var loading by remember { mutableStateOf(false) }
-              val scope = rememberCoroutineScope()
-              val successful = samples.filterNotNull()
-              val average = successful.takeIf { it.isNotEmpty() }?.average()?.roundToInt()
-              val min = successful.minOrNull()
-              val max = successful.maxOrNull()
-              val status = when {
-                  network.validated -> "اینترنت متصل و تأییدشده"
-                  network.connected -> "شبکه متصل؛ اینترنت تأیید نشده"
-                  else -> "اتصال اینترنت در دسترس نیست"
-              }
-              val statusColor = if (network.validated) Mint else Color(0xFFFFC36B)
+permissions:
+  contents: read
 
-              MaterialTheme(colorScheme = darkColorScheme(
-                  background = Ink,
-                  surface = Panel,
-                  primary = Mint,
-                  onBackground = Color.White,
-                  onSurface = Color.White
-              )) {
-                  androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                      Surface(modifier = Modifier.fillMaxSize(), color = Ink) {
-                          Column(
-                              modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-                              verticalArrangement = Arrangement.spacedBy(16.dp)
-                          ) {
-                              Row(verticalAlignment = Alignment.CenterVertically) {
-                                  Column(modifier = Modifier.weight(1f)) {
-                                      Text("ILIYA NETWORK", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                                      Text("مرکز وضعیت شبکه", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                                  }
-                                  Surface(color = Color(0xFF183A39), shape = RoundedCornerShape(50)) {
-                                      Text("نسخه 0.2.1", color = Mint, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 11.sp)
-                                  }
-                              }
-
-                              Card(
-                                  modifier = Modifier.fillMaxWidth(),
-                                  shape = RoundedCornerShape(26.dp),
-                                  colors = CardDefaults.cardColors(containerColor = Panel)
-                              ) {
-                                  Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                                      Text("وضعیت اتصال", color = Muted, fontSize = 13.sp)
-                                      Text(status, color = statusColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                      Row(verticalAlignment = Alignment.CenterVertically) {
-                                          Text("نوع شبکه", color = Muted, fontSize = 13.sp)
-                                          Spacer(Modifier.width(10.dp))
-                                          Text(network.type, color = Color.White, fontWeight = FontWeight.SemiBold)
-                                      }
-                                      Row(verticalAlignment = Alignment.CenterVertically) {
-                                          Text(if (network.metered) "مصرف اینترنت ممکن است هزینه داشته باشد" else "اتصال غیرحجمی یا نامشخص", color = Muted, fontSize = 12.sp)
-                                      }
-                                  }
-                              }
-
-                              Text("آزمایش پاسخ‌گویی", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                              Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                  MetricCard("میانگین", average?.let { "$it ms" } ?: "—", Modifier.weight(1f))
-                                  MetricCard("کمترین", min?.let { "$it ms" } ?: "—", Modifier.weight(1f))
-                                  MetricCard("بیشترین", max?.let { "$it ms" } ?: "—", Modifier.weight(1f))
-                              }
-
-                              Card(
-                                  modifier = Modifier.fillMaxWidth(),
-                                  shape = RoundedCornerShape(22.dp),
-                                  colors = CardDefaults.cardColors(containerColor = Panel)
-                              ) {
-                                  Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                      Text("نتیجه آخرین بررسی", color = Color.White, fontWeight = FontWeight.Bold)
-                                      Text(
-                                          if (samples.isEmpty()) "هنوز آزمایشی اجرا نشده است."
-                                          else "موفق: ${successful.size} از 5  •  ناموفق: ${5 - successful.size}",
-                                          color = Muted,
-                                          fontSize = 13.sp
-                                      )
-                                      Button(
-                                          onClick = {
-                                              scope.launch {
-                                                  loading = true
-                                                  network = readNetworkState(manager)
-                                                  samples = runHttpsChecks()
-                                                  network = readNetworkState(manager)
-                                                  loading = false
-                                              }
-                                          },
-                                          enabled = !loading,
-                                          modifier = Modifier.fillMaxWidth(),
-                                          colors = ButtonDefaults.buttonColors(containerColor = Mint, contentColor = Ink),
-                                          shape = RoundedCornerShape(14.dp)
-                                      ) {
-                                          if (loading) {
-                                              CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Ink)
-                                              Spacer(Modifier.width(9.dp))
-                                              Text("در حال بررسی...")
-                                          } else {
-                                              Text("شروع بررسی اتصال", fontWeight = FontWeight.Bold)
-                                          }
-                                      }
-                                      Text("این عدد زمان پاسخ درخواست HTTPS است، نه پینگ ICMP و نه تست سرعت دانلود/آپلود.", color = Muted, fontSize = 11.sp, lineHeight = 17.sp)
-                                  }
-                              }
-
-                              Text("در مسیر توسعه", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                              Card(
-                                  modifier = Modifier.fillMaxWidth(),
-                                  shape = RoundedCornerShape(20.dp),
-                                  colors = CardDefaults.cardColors(containerColor = Color(0xFF101827))
-                              ) {
- Column(modifier = Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
- Text("ارتباط نزدیک و پیام‌رسانی آفلاین", color = Color.White, fontWeight = FontWeight.SemiBold)
- Text("ارتباط محلی با Wi‑Fi و Bluetooth در مراحل بعدی اضافه می‌شود. این قابلیت هنوز در این نسخه فعال نیست.", color = Muted, fontSize = 12.sp, lineHeight = 18.sp)
-                                  }
-                              }
-              Spacer(Modifier.height(10.dp))
- Text("ILIYA NETWORK • Android", color = Color(0xFF65738A), fontSize = 10.sp)
-                          }
-                      }
-                  }
-              }
-          }
-
-          @Composable
-          private fun MetricCard(label: String, value: String, modifier: Modifier = Modifier) {
-              Card(
- modifier = modifier,
- shape = RoundedCornerShape(18.dp),
-                  colors = CardDefaults.cardColors(containerColor = Panel)
- ) {
- Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
- Text(label, color = Muted, fontSize = 11.sp)
- Text(value, color = Mint, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                  }
-              }
-          }
-          EOF
-
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate project and build
+        run: |
+          bash scripts/bootstrap.sh
           gradle --no-daemon assembleDebug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: iliya-network-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
